@@ -81,4 +81,4 @@ toTuple :: Property -> (Text, Value)
 toTuple (Property name value) = (name, value)
 
 object :: [(Text, Value)] -> Aeson.Value
-object = Aeson.object . fmap (\(k, v) -> Text.toLower k .= v)
+object = Aeson.object . fmap (\(k, v) -> k .= v)
