@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module Main where
+
 import qualified AST
 import           Control.Monad
 import           Control.Monad.Except
@@ -48,7 +49,7 @@ version = $(simpleVersion $ fst . last $ readP_to_S parseVersion CURRENT_PACKAGE
 
 parseOptions :: IO (Args, ())
 parseOptions = simpleOptions version empty
-  "Converts a Delphi Form File (DFM) to JSON"
+  "Converts a Delphi Form File (DFM/SFM) to JSON"
   ( Args
     <$> flag Format Compact
       (  long    "compact"
@@ -59,8 +60,9 @@ parseOptions = simpleOptions version empty
       <> metavar "PATH") )
   empty
 
-isExt :: String -> FilePath -> Bool
-isExt ext = (=='.':ext) . map toLower . takeExtension
+-- 支持多扩展名
+isExts :: [String] -> FilePath -> Bool
+isExts exts fp = any (\e -> map toLower (takeExtension fp) == '.':e) exts
 
 writeJSON :: ToJSON a => Config -> (FilePath, a) -> IO ()
 writeJSON cfg (filePath, obj)
@@ -75,6 +77,7 @@ readDFM p = do
   src <- Text.readFile p
   return (p, src)
 
+-- 扫描目录下的 .dfm/.sfm
 paths :: FilePath -> Producer FilePath IO ()
 paths path = do
   isFile <- lift $ doesFileExist path
@@ -83,7 +86,6 @@ paths path = do
     else do
       ps <- lift $ listDirectory path
       mapM_ (paths . (path </>)) ps
-  return ()
 
 parse :: Pipe (FilePath, Text) (FilePath, AST.Object) IO ()
 parse = forever $ do
@@ -92,17 +94,30 @@ parse = forever $ do
     Left  err -> lift $ Text.putStrLn err
     Right ast -> yield (path, ast)
 
+-- 核心逻辑：区分「单文件」与「目录」
 process :: FilePath -> Config -> IO ()
 process tgt cfg = do
-  p <- canonicalizePath tgt
-  setCurrentDirectory p
-  runEffect
-    $   paths p
-    >-> Pipes.filter (isExt "dfm")
-    >-> Pipes.map (makeRelative p)
-    >-> Pipes.mapM readDFM
-    >-> parse
-    >-> Pipes.mapM_ (writeJSON cfg)
+  absPath <- canonicalizePath tgt
+  isFile  <- doesFileExist absPath
+  if isFile
+    -- ========== 单文件模式 ==========
+    then do
+      let dir = takeDirectory absPath
+      setCurrentDirectory dir
+      txt <- Text.readFile (takeFileName absPath)
+      case parseDFM (takeFileName absPath) txt of
+        Left err -> Text.putStrLn err
+        Right ast-> writeJSON cfg (absPath, ast)
+    -- ========== 目录递归模式 ==========
+    else do
+      setCurrentDirectory absPath
+      runEffect
+        $   paths absPath
+        >-> Pipes.filter (isExts ["dfm","sfm"])
+        >-> Pipes.map (makeRelative absPath)
+        >-> Pipes.mapM readDFM
+        >-> parse
+        >-> Pipes.mapM_ (writeJSON cfg)
 
 main :: IO ()
 main = do
