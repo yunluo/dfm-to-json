@@ -35,27 +35,28 @@ jobs:
         run: |
           stack install --local-bin-path dist
 
-      # 4. 把 exe 收集起来（名称固定为 dfm-to-json.exe）
-      - name: Collect artifact
-        run: |
-          mkdir upload
-          copy dist\dfm-to-json.exe upload\
-          cd upload
-          7z a dfm-to-json-Win64.zip dfm-to-json.exe   # 压个包方便下载
 
-      # 5. 每次 push 都把 exe 当 Actions 产物保存 90 天
+      # 4. 仅把 exe 收集到 upload 目录
+      - name: Collect artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force upload
+          Copy-Item dist/dfm-to-json.exe upload/
+      
+      # 5. 上传产物（仅 exe）
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dfm-to-json-Win64
-          path: upload/*
+          path: upload/dfm-to-json.exe
+          
 
       # 6. 如果这次 push 是 tag（v*），则自动创建 Release 并上传 zip
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: upload/dfm-to-json-Win64.zip
+          files: upload/dfm-to-json.exe
           draft: false
           prerelease: false
         env:
