@@ -3,6 +3,7 @@ name: Build Windows binary & Release
 on:
   push:
     branches: [master, main]
+    tags: ['v*']          # 只有打 v* 标签才会触发 Release 步骤
   workflow_dispatch:      # 也可以手动点按钮跑
 
 jobs:
@@ -14,7 +15,7 @@ jobs:
 
       # 1. 装 Stack 和 GHC（官方 action，缓存自动做好）
       - name: Setup Haskell Stack
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         with:
           ghc-version: '9.6'   # 项目默认 resolver 用 9.6 系列，可改
           stack-version: 'latest'
