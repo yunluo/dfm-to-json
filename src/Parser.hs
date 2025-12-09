@@ -18,7 +18,7 @@ import qualified Text.Megaparsec.Char.Lexer         as Lexer
 type Parser = Parsec Void Text
 
 reserved :: [Text]
-reserved = [ "inherited", "inline", "object", "end", "true", "false" ]
+reserved = [ "inherited", "inline", "object", "true", "false" ]
 
 whitespace :: Parser ()
 whitespace = Lexer.space spaceConsumer singleLineComment multilineComment
