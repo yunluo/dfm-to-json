@@ -2,7 +2,6 @@ name: Build Windows binary & Release
 
 on:
   push:
-    branches: [master, main]
     tags: ['v*']          # 只有打 v* 标签才会触发 Release 步骤
   workflow_dispatch:      # 也可以手动点按钮跑
 
