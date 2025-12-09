@@ -72,10 +72,7 @@ instance Aeson.ToJSON Value where
   toJSON (AngleBracket xs)  = Aeson.object [ "items" .= fmap Aeson.toJSON xs ]
 
 typeNameToJSON :: (Text, Maybe Int) -> Aeson.Value
-typeNameToJSON (name, maybeIndex)
-  = Aeson.object
-    [ "name"  .= name
-    , "index" .= maybeIndex ]
+typeNameToJSON (name, _maybeIndex) = Aeson.object ["name" .= name]
 
 toTuple :: Property -> (Text, Value)
 toTuple (Property name value) = (name, value)
